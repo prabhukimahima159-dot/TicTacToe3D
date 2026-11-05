@@ -1,0 +1,857 @@
+<!-- ... html code snippet -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tic Tac Toe 3D Legends</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></link>
+    <!-- Three.js & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            overflow: hidden;
+            background-color: #070913;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+        .font-cinzel {
+            font-family: 'Cinzel', serif;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        .ui-layer {
+            position: relative;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .interactive {
+            pointer-events: auto !important;
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(6, 182, 212, 0.6);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen">
+
+    <!-- 3D WebGL Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay Layer -->
+    <div class="ui-layer h-screen flex flex-col justify-between p-3 sm:p-5">
+        
+        <!-- Header Controls -->
+        <header class="flex flex-col gap-2 w-full max-w-7xl mx-auto interactive">
+            <div class="flex justify-between items-center w-full">
+                <!-- Left Menu & Profile -->
+                <div class="flex items-center space-x-2 glass-panel px-3 py-2 rounded-2xl shadow-xl">
+                    <button id="btn-menu-open" class="p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-400 transition cursor-pointer" title="Main Menu">
+                        <i class="fa-solid fa-bars text-sm sm:text-lg"></i>
+                    </button>
+                    <button id="btn-shop-open" class="p-1.5 sm:p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 transition cursor-pointer" title="Theme Shop">
+                        <i class="fa-solid fa-store text-sm sm:text-lg"></i>
+                    </button>
+                    <div class="hidden sm:flex items-center space-x-1.5">
+                        <i class="fa-solid fa-cube text-cyan-400 text-base sm:text-xl"></i>
+                        <span class="font-bold font-cinzel text-xs sm:text-lg tracking-wide">3D TIC TAC TOE</span>
+                    </div>
+                </div>
+
+                <!-- Right Level, Coins & Score -->
+                <div class="flex items-center space-x-2">
+                    <div class="glass-panel px-3 py-1.5 rounded-2xl flex items-center space-x-2 border border-cyan-500/30">
+                        <div class="text-left">
+                            <p class="text-[9px] uppercase font-bold text-cyan-400">Level <span id="user-level">1</span></p>
+                            <div class="w-16 bg-slate-800 h-1.5 rounded-full overflow-hidden mt-0.5">
+                                <div id="xp-bar" class="bg-cyan-400 h-full w-0 transition-all duration-300"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-panel px-3 py-1.5 rounded-2xl flex items-center space-x-1.5 border border-amber-500/30">
+                        <i class="fa-solid fa-coins text-amber-400 text-sm"></i>
+                        <span id="coin-balance" class="font-bold text-amber-300 font-mono text-xs sm:text-sm">100</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub Toolbar -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-1">
+                <button id="btn-achievements-open" class="glass-panel px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-cyan-300 text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer">
+                    <i class="fa-solid fa-award text-amber-400"></i>
+                    <span>Achievements</span>
+                </button>
+                <div class="glass-panel px-3 py-1.5 rounded-xl flex items-center space-x-2 text-xs font-semibold text-slate-300">
+                    <i class="fa-solid fa-fire text-orange-400 animate-bounce"></i>
+                    <span>Win Streak: <strong id="win-streak" class="text-orange-400">0</strong></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Footer / Turn HUD -->
+        <footer class="w-full max-w-sm mx-auto glass-panel p-3 rounded-2xl flex items-center justify-between interactive shadow-xl border border-cyan-500/20 mb-1">
+            <div class="flex items-center space-x-2.5">
+                <div id="turn-dot" class="w-3.5 h-3.5 rounded-full bg-cyan-400 animate-pulse"></div>
+                <span id="turn-text" class="font-bold text-xs sm:text-sm text-slate-200">Player X's Turn</span>
+            </div>
+            <button id="btn-restart" class="px-3 py-1 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 rounded-xl font-bold text-[11px] transition cursor-pointer">
+                Reset
+            </button>
+        </footer>
+    </div>
+
+    <!-- MAIN MENU MODAL -->
+    <div id="menu-modal" class="fixed inset-0 z-40 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 interactive">
+        <div class="glass-panel p-6 sm:p-8 rounded-3xl max-w-xs sm:max-w-md w-full border border-cyan-500/30 shadow-2xl text-center">
+            <h2 class="text-2xl sm:text-3xl font-extrabold font-cinzel text-cyan-400 mb-1">TIC TAC TOE 3D</h2>
+            <p class="text-slate-400 text-xs sm:text-sm mb-6">Choose Game Mode</p>
+
+            <div class="space-y-3 mb-6">
+                <button id="mode-pve" class="w-full py-3 px-4 rounded-2xl border-2 border-cyan-500 bg-cyan-500/20 text-white font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer">
+                    <i class="fa-solid fa-robot text-cyan-400"></i>
+                    <span>vs AI Bot (Smart)</span>
+                </button>
+                <button id="mode-pvp" class="w-full py-3 px-4 rounded-2xl border-2 border-slate-700 bg-slate-800/60 text-slate-300 font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer">
+                    <i class="fa-solid fa-users text-cyan-400"></i>
+                    <span>Pass & Play (2 Players)</span>
+                </button>
+                <button id="mode-online" disabled class="w-full py-3 px-4 rounded-2xl border-2 border-slate-700 bg-slate-900/60 text-slate-500 font-bold text-sm transition flex items-center justify-between cursor-not-allowed opacity-75">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-globe text-slate-600"></i>
+                        <span>Online Multiplayer</span>
+                    </div>
+                    <span class="px-2.5 py-0.5 bg-amber-500/20 border border-amber-500/40 rounded-full text-[10px] text-amber-400 font-extrabold uppercase tracking-wider animate-pulse">Coming Soon</span>
+                </button>
+            </div>
+
+            <button id="btn-start-game" class="w-full py-3 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-slate-950 font-extrabold text-sm rounded-xl shadow-lg transition cursor-pointer">
+                Start Match
+            </button>
+        </div>
+    </div>
+
+    <!-- THEME SHOP MODAL -->
+    <div id="shop-modal" class="hidden fixed inset-0 z-40 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 interactive">
+        <div class="glass-panel p-6 rounded-3xl max-w-xs sm:max-w-md w-full border border-amber-500/30 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold font-cinzel text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-store"></i> 3D Skin Shop
+                </h3>
+                <button id="btn-shop-close" class="p-1 rounded-xl text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3">
+                <div class="p-3 rounded-2xl bg-slate-900 border border-amber-500/40 flex items-center justify-between">
+                    <div>
+                        <h4 class="font-bold text-xs text-slate-100">Cyber Neon X/O</h4>
+                        <p class="text-[10px] text-slate-400">Glowing Cyberpunk Skins</p>
+                    </div>
+                    <button id="btn-buy-neon" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl cursor-pointer">Equipped</button>
+                </div>
+                <div class="p-3 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-between">
+                    <div>
+                        <h4 class="font-bold text-xs text-slate-100">Gold Master Set</h4>
+                        <p class="text-[10px] text-slate-400">250 Coins</p>
+                    </div>
+                    <button id="btn-buy-gold" class="px-3 py-1.5 bg-slate-800 hover:bg-amber-600 text-amber-300 font-bold text-xs rounded-xl border border-amber-500/30 cursor-pointer">Buy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACHIEVEMENTS MODAL -->
+    <div id="achievements-modal" class="hidden fixed inset-0 z-40 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 interactive">
+        <div class="glass-panel p-6 rounded-3xl max-w-xs sm:max-w-md w-full border border-cyan-500/30 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold font-cinzel text-cyan-400 flex items-center gap-2">
+                    <i class="fa-solid fa-award"></i> Achievements
+                </h3>
+                <button id="btn-achievements-close" class="p-1 rounded-xl text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-2.5 max-h-64 overflow-y-auto custom-scrollbar pr-1" id="achievements-list">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME OVER MODAL -->
+    <div id="gameover-modal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 interactive">
+        <div class="glass-panel p-6 rounded-3xl max-w-xs sm:max-w-sm w-full border border-cyan-500/40 shadow-2xl text-center">
+            <div class="w-14 h-14 mx-auto mb-3 bg-cyan-500/20 border border-cyan-500/50 rounded-2xl flex items-center justify-center">
+                <i id="gameover-icon" class="fa-solid fa-trophy text-2xl text-cyan-400"></i>
+            </div>
+            <h3 id="gameover-title" class="text-xl font-bold font-cinzel text-cyan-400 mb-1">Player X Wins!</h3>
+            <p id="gameover-desc" class="text-xs text-slate-300 mb-2">+50 XP | +20 Coins</p>
+            <button id="btn-play-again" class="w-full py-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs rounded-xl shadow-lg transition cursor-pointer">Play Again</button>
+        </div>
+    </div>
+
+    <!-- FIREBASE MULTIPLAYER IMPORTS -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-tic-tac-toe-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        let db = null;
+        let auth = null;
+        let unsubscribeRoom = null;
+        let user = null;
+        
+        window._localRooms = window._localRooms || {};
+
+        if (firebaseConfig) {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                
+                const authPromise = initialAuthToken 
+                    ? signInWithCustomToken(auth, initialAuthToken) 
+                    : signInAnonymously(auth);
+
+                authPromise.then(() => {
+                    user = auth.currentUser;
+                    updateUserUI(user);
+                }).catch(e => console.warn("Auth warning:", e));
+
+                onAuthStateChanged(auth, (u) => {
+                    if (u) {
+                        user = u;
+                        updateUserUI(u);
+                    }
+                });
+            } catch (err) {
+                console.warn("Firebase initialization warning:", err);
+            }
+        }
+
+        function updateUserUI(u) {
+            const idDisp = document.getElementById('player-id-display');
+            const loginBtnText = document.getElementById('login-btn-text');
+            const avatar = document.getElementById('user-avatar-icon');
+            if (u && idDisp) {
+                const shortId = u.uid.substring(0, 8).toUpperCase();
+                idDisp.innerText = u.displayName || `User_${shortId}`;
+                if (loginBtnText) loginBtnText.innerText = u.isAnonymous ? "Google Link" : "Connected";
+                if (avatar && u.photoURL) {
+                    avatar.innerHTML = `<img src="${u.photoURL}" class="w-full h-full rounded-xl object-cover">`;
+                }
+            }
+        }
+
+        window.loginWithGoogle = async function() {
+            if (!auth) {
+                document.getElementById('room-status-text').innerText = "Auth not available!";
+                return;
+            }
+            try {
+                const provider = new GoogleAuthProvider();
+                const result = await signInWithPopup(auth, provider);
+                user = result.user;
+                updateUserUI(user);
+                document.getElementById('room-status-text').innerText = `Signed in as ${user.displayName}`;
+            } catch (e) {
+                console.warn("Google Sign-In popup error:", e);
+                document.getElementById('room-status-text').innerText = "Google Sign-In failed or blocked in iframe.";
+            }
+        };
+
+        window.createOnlineRoom = async function() {
+            const customPrefix = user ? user.uid.substring(0, 4).toUpperCase() : 'ROOM';
+            const roomCode = customPrefix + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+            window.activeRoomCode = roomCode;
+            window.isOnlineHost = true;
+            window.onlinePlayerSymbol = 'X';
+            window.isSpectator = false;
+
+            const onlineModal = document.getElementById('online-modal');
+            if (onlineModal) onlineModal.classList.add('hidden');
+
+            window._localRooms[roomCode] = {
+                board: Array(9).fill(null),
+                turn: 'X',
+                playerX: user ? user.uid : 'host',
+                playerO: null,
+                status: 'waiting'
+            };
+
+            document.getElementById('room-status-text').innerText = `Room ID Created: ${roomCode}`;
+
+            if (!db) {
+                resetGame();
+                return;
+            }
+
+            try {
+                const userId = user ? user.uid : 'anon';
+                const roomRef = doc(db, 'artifacts', appId, 'rooms', roomCode);
+                await setDoc(roomRef, {
+                    board: Array(9).fill(null),
+                    turn: 'X',
+                    playerX: userId,
+                    playerO: null,
+                    status: 'waiting',
+                    winner: null
+                });
+                listenToRoom(roomCode);
+            } catch (e) {
+                console.warn("Cloud room creation fallback:", e);
+            }
+            resetGame();
+        };
+
+        window.joinOnlineRoom = async function(code) {
+            const roomCode = (code || document.getElementById('room-code-input').value || '').trim().toUpperCase();
+            if (!roomCode) {
+                document.getElementById('room-status-text').innerText = "Please enter a valid Room ID!";
+                return;
+            }
+
+            window.activeRoomCode = roomCode;
+            const onlineModal = document.getElementById('online-modal');
+
+            if (!db) {
+                if (!window._localRooms[roomCode]) {
+                    window._localRooms[roomCode] = { board: Array(9).fill(null), turn: 'X', playerX: 'host', playerO: 'guest', status: 'playing' };
+                }
+                window.onlinePlayerSymbol = 'O';
+                window.isSpectator = false;
+                if (onlineModal) onlineModal.classList.add('hidden');
+                document.getElementById('room-status-text').innerText = `Joined Room: ${roomCode}`;
+                resetGame();
+                return;
+            }
+
+            try {
+                const userId = user ? user.uid : 'anon';
+                const roomRef = doc(db, 'artifacts', appId, 'rooms', roomCode);
+                const snap = await getDoc(roomRef);
+                
+                if (!snap.exists()) {
+                    window._localRooms[roomCode] = { board: Array(9).fill(null), turn: 'X', playerX: 'host', playerO: userId, status: 'playing' };
+                    window.onlinePlayerSymbol = 'O';
+                    window.isSpectator = false;
+                    if (onlineModal) onlineModal.classList.add('hidden');
+                    resetGame();
+                    return;
+                }
+
+                const data = snap.data();
+                if (!data.playerO && data.playerX !== userId) {
+                    window.onlinePlayerSymbol = 'O';
+                    window.isSpectator = false;
+                    await updateDoc(roomRef, { playerO: userId, status: 'playing' });
+                } else if (data.playerX === userId) {
+                    window.onlinePlayerSymbol = 'X';
+                    window.isSpectator = false;
+                } else if (data.playerO === userId) {
+                    window.onlinePlayerSymbol = 'O';
+                    window.isSpectator = false;
+                } else {
+                    window.isSpectator = true;
+                    window.onlinePlayerSymbol = null;
+                }
+
+                if (onlineModal) onlineModal.classList.add('hidden');
+                listenToRoom(roomCode);
+                resetGame();
+            } catch (e) {
+                console.warn("Join fallback triggered:", e);
+                window.onlinePlayerSymbol = 'O';
+                window.isSpectator = false;
+                if (onlineModal) onlineModal.classList.add('hidden');
+                resetGame();
+            }
+        };
+
+        window.makeOnlineMove = async function(idx, player) {
+            if (!window.activeRoomCode || window.isSpectator) return;
+            
+            if (window._localRooms[window.activeRoomCode]) {
+                let r = window._localRooms[window.activeRoomCode];
+                if (r.board[idx] === null && r.turn === player) {
+                    r.board[idx] = player;
+                    r.turn = player === 'X' ? 'O' : 'X';
+                    window.syncOnlineBoard(r);
+                }
+            }
+
+            if (!db) return;
+
+            try {
+                const roomRef = doc(db, 'artifacts', appId, 'rooms', window.activeRoomCode);
+                const snap = await getDoc(roomRef);
+                if (!snap.exists()) return;
+                const data = snap.data();
+                let board = data.board || Array(9).fill(null);
+                if (board[idx] === null && data.turn === player) {
+                    board[idx] = player;
+                    const nextTurn = player === 'X' ? 'O' : 'X';
+                    await updateDoc(roomRef, { board: board, turn: nextTurn });
+                }
+            } catch (e) {}
+        };
+
+        function listenToRoom(roomCode) {
+            if (!db) return;
+            if (unsubscribeRoom) unsubscribeRoom();
+            try {
+                const roomRef = doc(db, 'artifacts', appId, 'rooms', roomCode);
+                unsubscribeRoom = onSnapshot(roomRef, (docSnap) => {
+                    if (!docSnap.exists()) return;
+                    const data = docSnap.data();
+                    window.syncOnlineBoard(data);
+                }, (error) => {});
+            } catch (e) {}
+        }
+    </script>
+
+    <!-- THREE.JS GAME ENGINE -->
+    <script>
+        class SoundEngine {
+            constructor() { this.ctx = null; }
+            init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+            play(type) {
+                try {
+                    this.init();
+                    if (this.ctx.state === 'suspended') this.ctx.resume();
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    const now = this.ctx.currentTime;
+                    if (type === 'place') {
+                        osc.frequency.setValueAtTime(440, now);
+                        osc.frequency.exponentialRampToValueAtTime(220, now + 0.1);
+                        gain.gain.setValueAtTime(0.3, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                        osc.start(now); osc.stop(now + 0.1);
+                    } else if (type === 'win') {
+                        osc.frequency.setValueAtTime(523.25, now);
+                        osc.frequency.setValueAtTime(659.25, now + 0.1);
+                        osc.frequency.setValueAtTime(783.99, now + 0.2);
+                        gain.gain.setValueAtTime(0.3, now);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                        osc.start(now); osc.stop(now + 0.4);
+                    }
+                } catch(e) {}
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        let userData = {
+            coins: parseInt(localStorage.getItem('ttt_coins') || '100'),
+            xp: parseInt(localStorage.getItem('ttt_xp') || '0'),
+            level: parseInt(localStorage.getItem('ttt_level') || '1'),
+            winStreak: parseInt(localStorage.getItem('ttt_streak') || '0'),
+            unlockedSkins: JSON.parse(localStorage.getItem('ttt_skins') || '["neon"]'),
+            currentSkin: localStorage.getItem('ttt_active_skin') || 'neon',
+            achievements: JSON.parse(localStorage.getItem('ttt_achievements') || '{"first_win":false, "streak_3":false}')
+        };
+
+        let scene, camera, renderer, controls, raycaster, mouse;
+        let boardGrid = Array(9).fill(null);
+        let turn = 'X';
+        let gameMode = 'pve';
+        let isGameOver = false;
+        let cellMeshes = [];
+        let pieceGroup;
+
+        window.onload = function() {
+            init3D();
+            setupUI();
+            updateHUD();
+            renderAchievements();
+        };
+
+        function init3D() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x070913);
+            scene.fog = new THREE.FogExp2(0x070913, 0.02);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 10, 10);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05;
+            controls.minDistance = 6;
+            controls.maxDistance = 20;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xe0f2fe, 1.2);
+            dirLight.position.set(5, 15, 10);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            pieceGroup = new THREE.Group();
+            scene.add(pieceGroup);
+
+            build3DBoard();
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            window.addEventListener('resize', onWindowResize);
+            renderer.domElement.addEventListener('pointerdown', onPointerDown);
+
+            animate();
+        }
+
+        function build3DBoard() {
+            cellMeshes = [];
+            const baseGeo = new THREE.BoxGeometry(6.4, 0.3, 6.4);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.6 });
+            const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+            baseMesh.position.y = -0.2;
+            scene.add(baseMesh);
+
+            const cellGeo = new THREE.BoxGeometry(1.9, 0.1, 1.9);
+            const cellMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4, metalness: 0.2 });
+
+            for (let r = 0; r < 3; r++) {
+                for (let c = 0; c < 3; c++) {
+                    const cell = new THREE.Mesh(cellGeo, cellMat);
+                    cell.position.set((c - 1) * 2.1, 0.0, (r - 1) * 2.1);
+                    cell.userData = { index: r * 3 + c };
+                    scene.add(cell);
+                    cellMeshes.push(cell);
+                }
+            }
+        }
+
+        function createXMesh() {
+            const group = new THREE.Group();
+            const color = userData.currentSkin === 'gold' ? 0xf59e0b : 0x06b6d4;
+            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.2, metalness: 0.8 });
+            const geo = new THREE.BoxGeometry(0.3, 0.3, 1.5);
+            
+            const bar1 = new THREE.Mesh(geo, mat);
+            bar1.rotation.y = Math.PI / 4;
+            bar1.castShadow = true;
+            group.add(bar1);
+
+            const bar2 = new THREE.Mesh(geo, mat);
+            bar2.rotation.y = -Math.PI / 4;
+            bar2.castShadow = true;
+            group.add(bar2);
+
+            return group;
+        }
+
+        function createOMesh() {
+            const color = userData.currentSkin === 'gold' ? 0xeab308 : 0xf59e0b;
+            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.2, metalness: 0.8 });
+            const geo = new THREE.TorusGeometry(0.6, 0.18, 16, 32);
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.rotation.x = Math.PI / 2;
+            mesh.castShadow = true;
+            return mesh;
+        }
+
+        function onPointerDown(event) {
+            if (isGameOver) return;
+            if (gameMode === 'pve' && turn === 'O') return;
+            if (gameMode === 'online') {
+                if (window.isSpectator) return; // Spectators cannot place pieces
+                if (window.onlinePlayerSymbol && turn !== window.onlinePlayerSymbol && window.activeRoomCode) return;
+            }
+
+            const clientX = event.clientX || (event.touches && event.touches[0].clientX);
+            const clientY = event.clientY || (event.touches && event.touches[0].clientY);
+            if (!clientX || !clientY) return;
+
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(cellMeshes);
+
+            if (intersects.length > 0) {
+                const idx = intersects[0].object.userData.index;
+                if (boardGrid[idx] === null) {
+                    if (gameMode === 'online') {
+                        window.makeOnlineMove(idx, turn);
+                    } else {
+                        makeMoveLocally(idx, turn);
+                    }
+                }
+            }
+        }
+
+        function makeMoveLocally(idx, player) {
+            boardGrid[idx] = player;
+            sound.play('place');
+
+            const cell = cellMeshes[idx];
+            const piece = player === 'X' ? createXMesh() : createOMesh();
+            piece.position.copy(cell.position);
+            piece.position.y = 0.5;
+            pieceGroup.add(piece);
+
+            const winner = checkWin(boardGrid);
+            if (winner) {
+                endGame(winner);
+                return;
+            }
+
+            if (boardGrid.every(cell => cell !== null)) {
+                endGame('tie');
+                return;
+            }
+
+            turn = turn === 'X' ? 'O' : 'X';
+            updateHUD();
+
+            if (gameMode === 'pve' && turn === 'O' && !isGameOver) {
+                setTimeout(makeAIMove, 500);
+            }
+        }
+
+        window.syncOnlineBoard = function(data) {
+            boardGrid = data.board || Array(9).fill(null);
+            turn = data.turn || 'X';
+            while (pieceGroup.children.length > 0) pieceGroup.remove(pieceGroup.children[0]);
+            
+            for (let i = 0; i < 9; i++) {
+                if (boardGrid[i]) {
+                    const cell = cellMeshes[i];
+                    const piece = boardGrid[i] === 'X' ? createXMesh() : createOMesh();
+                    piece.position.copy(cell.position);
+                    piece.position.y = 0.5;
+                    pieceGroup.add(piece);
+                }
+            }
+            const winner = checkWin(boardGrid);
+            if (winner && !isGameOver) {
+                endGame(winner);
+            } else if (boardGrid.every(c => c !== null) && !isGameOver) {
+                endGame('tie');
+            }
+            updateHUD();
+        };
+
+        function makeAIMove() {
+            if (isGameOver) return;
+            let emptyIndices = boardGrid.map((v, i) => v === null ? i : null).filter(v => v !== null);
+            if (emptyIndices.length === 0) return;
+
+            let moveIdx = findBestAIMove('O') ?? findBestAIMove('X') ?? emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+            makeMoveLocally(moveIdx, 'O');
+        }
+
+        function findBestAIMove(player) {
+            const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+            for (let w of wins) {
+                let [a, b, c] = w;
+                let vals = [boardGrid[a], boardGrid[b], boardGrid[c]];
+                if (vals.filter(v => v === player).length === 2 && vals.includes(null)) {
+                    return w[vals.indexOf(null)];
+                }
+            }
+            return null;
+        }
+
+        const winsCombos = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+        function checkWin(grid) {
+            for (let w of winsCombos) {
+                let [a, b, c] = w;
+                if (grid[a] && grid[a] === grid[b] && grid[a] === grid[c]) {
+                    return grid[a];
+                }
+            }
+            return null;
+        }
+
+        function endGame(result) {
+            isGameOver = true;
+            sound.play('win');
+            const modal = document.getElementById('gameover-modal');
+            const title = document.getElementById('gameover-title');
+            const desc = document.getElementById('gameover-desc');
+            const icon = document.getElementById('gameover-icon');
+
+            let xpGain = 30;
+            let coinGain = 15;
+
+            if (result === 'tie') {
+                title.innerText = "It's a Draw!";
+                desc.innerText = "+15 XP | +5 Coins";
+                icon.className = "fa-solid fa-handshake text-2xl text-cyan-400";
+                userData.winStreak = 0;
+            } else {
+                title.innerText = `Player ${result} Wins!`;
+                if (result === 'X') {
+                    userData.winStreak++;
+                    userData.achievements.first_win = true;
+                    if (userData.winStreak >= 3) userData.achievements.streak_3 = true;
+                }
+                desc.innerText = `+50 XP | +25 Coins (Streak: ${userData.winStreak})`;
+                icon.className = "fa-solid fa-trophy text-2xl text-amber-400";
+                coinGain = 25;
+                xpGain = 50;
+            }
+
+            userData.coins += coinGain;
+            userData.xp += xpGain;
+            if (userData.xp >= userData.level * 100) {
+                userData.level++;
+                userData.xp = 0;
+            }
+
+            localStorage.setItem('ttt_coins', userData.coins);
+            localStorage.setItem('ttt_xp', userData.xp);
+            localStorage.setItem('ttt_level', userData.level);
+            localStorage.setItem('ttt_streak', userData.winStreak);
+            localStorage.setItem('ttt_achievements', JSON.stringify(userData.achievements));
+
+            updateHUD();
+            renderAchievements();
+            modal.classList.remove('hidden');
+        }
+
+        function resetGame() {
+            boardGrid = Array(9).fill(null);
+            turn = 'X';
+            isGameOver = false;
+            while (pieceGroup.children.length > 0) pieceGroup.remove(pieceGroup.children[0]);
+            document.getElementById('gameover-modal').classList.add('hidden');
+            updateHUD();
+        }
+
+        function updateHUD() {
+            document.getElementById('user-level').innerText = userData.level;
+            document.getElementById('xp-bar').style.width = `${(userData.xp / (userData.level * 100)) * 100}%`;
+            document.getElementById('coin-balance').innerText = userData.coins;
+            document.getElementById('win-streak').innerText = userData.winStreak;
+            
+            let turnMessage = `Player ${turn}'s Turn`;
+            if (window.isSpectator) {
+                turnMessage = `👀 Spectating Room (${turn}'s Turn)`;
+            } else if (window.onlinePlayerSymbol) {
+                turnMessage = `You are Player ${window.onlinePlayerSymbol} (${turn}'s Turn)`;
+            }
+
+            document.getElementById('turn-text').innerText = turnMessage;
+            document.getElementById('turn-dot').className = `w-3.5 h-3.5 rounded-full ${turn === 'X' ? 'bg-cyan-400' : 'bg-amber-400'} animate-pulse`;
+        }
+
+        function renderAchievements() {
+            const list = document.getElementById('achievements-list');
+            list.innerHTML = `
+                <div class="p-2.5 bg-slate-900 rounded-xl border flex items-center justify-between ${userData.achievements.first_win ? 'border-cyan-500/60' : 'border-slate-800 opacity-60'}">
+                    <div><h5 class="font-bold text-xs">First Blood</h5><p class="text-[9px] text-slate-400">Win your first match</p></div>
+                    <i class="fa-solid fa-check ${userData.achievements.first_win ? 'text-cyan-400' : 'text-slate-600'}"></i>
+                </div>
+                <div class="p-2.5 bg-slate-900 rounded-xl border flex items-center justify-between ${userData.achievements.streak_3 ? 'border-cyan-500/60' : 'border-slate-800 opacity-60'}">
+                    <div><h5 class="font-bold text-xs">Hot Streak</h5><p class="text-[9px] text-slate-400">Achieve 3 wins in a row</p></div>
+                    <i class="fa-solid fa-check ${userData.achievements.streak_3 ? 'text-cyan-400' : 'text-slate-600'}"></i>
+                </div>
+            `;
+        }
+
+        function setupUI() {
+            const bindClick = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
+
+            bindClick('btn-menu-open', () => document.getElementById('menu-modal').classList.remove('hidden'));
+            bindClick('btn-restart', () => resetGame());
+            bindClick('btn-play-again', resetGame);
+
+            bindClick('mode-pve', () => {
+                gameMode = 'pve';
+                window.isSpectator = false;
+                window.onlinePlayerSymbol = null;
+                document.getElementById('mode-pve').className = "w-full py-3 px-4 rounded-2xl border-2 border-cyan-500 bg-cyan-500/20 text-white font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
+                document.getElementById('mode-pvp').className = "w-full py-3 px-4 rounded-2xl border-2 border-slate-700 bg-slate-800/60 text-slate-300 font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
+                document.getElementById('mode-online').className = "w-full py-3 px-4 rounded-2xl border-2 border-indigo-500/60 bg-indigo-500/20 text-indigo-300 font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
+            });
+            bindClick('mode-pvp', () => {
+                gameMode = 'pvp';
+                document.getElementById('mode-pvp').className = "w-full py-3 px-4 rounded-2xl border-2 border-cyan-500 bg-cyan-500/20 text-white font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
+                document.getElementById('mode-pve').className = "w-full py-3 px-4 rounded-2xl border-2 border-slate-700 bg-slate-800/60 text-slate-300 font-bold text-sm transition flex items-center justify-center space-x-2 cursor-pointer";
+            });
+
+            bindClick('btn-shop-open', () => document.getElementById('shop-modal').classList.remove('hidden'));
+            bindClick('btn-shop-close', () => document.getElementById('shop-modal').classList.add('hidden'));
+            bindClick('btn-achievements-open', () => document.getElementById('achievements-modal').classList.remove('hidden'));
+            bindClick('btn-achievements-close', () => document.getElementById('achievements-modal').classList.add('hidden'));
+
+            bindClick('btn-buy-gold', () => {
+                if (userData.coins >= 250 && !userData.unlockedSkins.includes('gold')) {
+                    userData.coins -= 250;
+                    userData.unlockedSkins.push('gold');
+                    userData.currentSkin = 'gold';
+                    localStorage.setItem('ttt_coins', userData.coins);
+                    localStorage.setItem('ttt_skins', JSON.stringify(userData.unlockedSkins));
+                    localStorage.setItem('ttt_active_skin', 'gold');
+                    document.getElementById('btn-buy-gold').innerText = "Equipped";
+                    updateHUD();
+                }
+            });
+
+            bindClick('btn-start-game', () => {
+                document.getElementById('menu-modal').classList.add('hidden');
+                resetGame();
+            });
+        }
+
+        function onWindowResize() {
+            if (!camera || !renderer) return;
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls) controls.update();
+            if (renderer && scene && camera) renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
